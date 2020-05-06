@@ -1,0 +1,15 @@
+{
+    "name": "taf/forum",
+    "authors": [
+        {
+            "name": "staf",
+            "email": "fatfa83@yahoo.fr"
+        }
+    ],
+    "autoload": {
+		"psr-4" : {
+		"Forum\\" : "appli"}
+	},
+	
+    "require": {}
+}
