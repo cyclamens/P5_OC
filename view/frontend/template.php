@@ -4,11 +4,13 @@
     <meta charset="utf-8" />
     <title><?= $title ?></title>
     <!--lien avec fichier css -->
-    <link rel="stylesheet" href="public/css/style.css" /> 
+    <link rel="stylesheet" href="css/style.css" />
+     
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css">
     <!--responsive meta tag-->
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-	<meta name="description" content="">
-	<meta name="keywords" content="" />
+	<meta name="description" content="Des questions sur le recyclage, le climat, le développement durable en général, c'est le forum qu'il vous faut">
+	<meta name="keywords" content=" climat, eau, déchets, air" />
 	<!--Google font-->
 	<link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
 	<!--Bootstrap css compilé-->
@@ -23,14 +25,17 @@
 </head>
         
 <body>
+	
 <!--insertion du menu-->
 <?php require("menu.php"); ?>
     <!--div contenant la grande section-->
     <div class="container-fluid">
         <?= $content ?>
     </div>
-    <script type="text/javascript" src="public/js/app.js"></script>
+  
 <!-- le pieds de page -->     
 <?php require('footer.php'); ?>
+
+
 </body>
 </html>

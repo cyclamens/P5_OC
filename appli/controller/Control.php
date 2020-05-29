@@ -1,9 +1,10 @@
 <?php
 namespace Forum\controller;
+
 // Chargement des classes
 require('vendor/autoload.php');
 use Forum\model\{
-    InscriptionManager, ConnexionManager
+    InscriptionManager, ConnexionManager, editprofilManager, EditCatManager, PostManager, CommentManager
 };
 
 
@@ -80,7 +81,9 @@ class Control
                         $_SESSION['pseudoconnect'] = $userinfo['pseudo'];
                         $_SESSION['idconnect'] = $userinfo['user_id'];
                         $_SESSION['adminconnect'] = $userinfo['admin'];
-                        header("Location:index.php?action=forum");
+                        $_SESSION['mailconnect'] = $userinfo['mail'];
+                        $_SESSION['avatarconnect'] = $userinfo['avatar'];
+                        header("Location:index.php?action=meteo");
                     }else{
                         throw new \Exception("Mauvais mot de passe");  
                     }
@@ -97,162 +100,371 @@ class Control
         require('view/frontend/connexion.php');
     }
 
+    //rédaction des catégories
+    public function redaction()
+    {
+        $redactionOk = new EditCatManager();
+
+        if(isset($_POST['cat_title'])) {
+            if(!empty($_POST['cat_title'])) {
+      
+                $title = htmlspecialchars($_POST['cat_title']);
+            
+                $editOk = $redactionOk->edit($title);
+                if ($editOk) {
+                    throw new \Exception("Votre catégorie a bien été postée");  
+                }else{
+                    throw new \Exception("Catégorie non postée"); 
+                }
+      
+            } else {
+                throw new \Exception("Veuillez remplir tous les champs");
+            }
+        }
+
+        require('view/backend/editcategorie.php');
+    }
+
+
     //permer de se déconnecter
-    function deconnect()
+    public function deconnect()
     {
         $_SESSION = array();
         session_destroy();
         header("Location: index.php?action=connexion");
     }
+    //page de profil
+    public function profil()
+    {
+        require('view/frontend/profil.php');
+    }
 
+    //page d'édition de profil
+    public function editProfil($userId)
+    {
 
-}
-
-
-
-/*
-//permet la rédaction des chapitres
-function redaction()
-{
-    $redactionOk = new \OpenClassrooms\Blog\Model\EditPostManager();
-    if(isset($_POST['article_title'], $_POST['article_content'])) {
-        if(!empty($_POST['article_title']) AND !empty($_POST['article_content'])) {
-      
-            $article_title = $_POST['article_title'];
-            $article_content = $_POST['article_content'];
-            $editOk = $redactionOk->edit($article_title, $article_content);
-            if ($editOk) {
-                throw new Exception("Votre article a bien été posté");  
-            }else{
-                throw new Exception("Article non posté"); 
-            }
-      
-        } else {
-            throw new Exception("Veuillez remplir tous les champs");
+        $editionprofilOk = new editprofilManager();
+        
+        if(isset($_SESSION['idconnect'])) {
+            $requser = $editionprofilOk->reqUser($_SESSION['idconnect']);
+            $user = $requser->fetch();
+            
+           
+            require('view/frontend/editprofil.php');
         }
     }
 
-    require('view/backend/editpost.php');
-}
-//supprime un chapitre
-function supprimChapter($postId)
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager();
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-    $posts = $postManager->getPosts();
-    $comments = $commentManager->adminFlagComments();
-    $supChap = $postManager->supprimPost($postId);
-   header("Location: index.php?action=administration");
-}
-//modification d'un chapitre
-function editChapter($postId)
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager();
-    $editChap = $postManager->getPost($postId);
-    
-   require('view/backend/modifpost.php');
-}
-//modification et envoi du chapitre dans la BDD
-function updateChapter($postId)
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager();
-    $titre_chap = $_POST['article_title'];
-    $content_chap = $_POST['article_content'];
-    $postId = $_GET['id'];
-    $postManager->editPost($titre_chap ,$content_chap ,$postId);
-    throw new Exception("Votre article a bien été modifié !");
-    
-}
-//page d'administration
-function admin()
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager(); // Création d'un objet
-    $posts = $postManager->getPosts();
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-    $flagComments = $commentManager->adminFlagComments();
-    require('view/backend/admin.php');
-}
- 
-//liste les chapitres
-function listPosts()
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager(); // Création d'un objet
-    $posts = $postManager->getPosts(); // Appel d'une fonction de cet objet
+    //page de traitement de la modification du profil
+    public function validProfil($userId)
+    {
 
-    require('view/frontend/listPostsView.php');
-}
-//affiche un chapitre
-function post()
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager();
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-
-    $post = $postManager->getPost($_GET['id']);
-    $comments = $commentManager->getComments($_GET['id']);
-
-    require('view/frontend/postView.php');
-}
-//ajout de commentaire
-function addComment($postId, $author, $comment)
-{
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager(); // Création d'un objet
-
-    $affectedLines = $commentManager->postComment($_GET['id'], $_SESSION['idconnect'], $comment);
-    
-    if ($affectedLines === false) {
-        throw new Exception('Impossible d\'ajouter le commentaire !');
-    }
-    else {
-        header('Location: index.php?action=chapitre&id=' . $_GET['id']);
-    }
-}
-//signalement d'un commentaire
-function flag($commentId)
-{
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-    $affectedFlag = $commentManager->flagComment($commentId);
-    if ($affectedFlag) {
-         header('Location: index.php?action=chapitre&id=' . $_GET['post_id']);
-   
-    }
-    else{
-        throw new Exception("commentaire non signalé !");
+        $editionprofilOk = new editprofilManager();
         
+        if(isset($_SESSION['idconnect'])) {
+            $requser = $editionprofilOk->reqUser($_SESSION['idconnect']);
+            $user = $requser->fetch();
+           
+            //modification du pseudo
+            if(isset($_POST['newpseudo']) AND !empty($_POST['newpseudo']) AND $_POST['newpseudo']) {
+                $newpseudo = htmlspecialchars($_POST['newpseudo']);
+                $reqpseudo = $editionprofilOk->reqPseudo($newpseudo, $_SESSION['idconnect']);
+                header('Location: index.php?action=profil');
+            }
+            //modification du mail
+            if(isset($_POST['newmail']) AND !empty($_POST['newmail']) AND $_POST['newmail']) {
+                $newmail = htmlspecialchars($_POST['newmail']);
+                $reqmail = $editionprofilOk->reqMail($newmail, $_SESSION['idconnect']);
+               
+                header('Location: index.php?action=profil');
+            }
+            
+            //modification du mot de passe
+            if(isset($_POST['newmdp1']) AND !empty($_POST['newmdp1']) AND isset($_POST['newmdp2']) AND !empty($_POST['newmdp2'])) {
+                $mdp1 = $_POST['newmdp1'];
+                $mdp2 = $_POST['newmdp2'];
+                if($mdp1 == $mdp2) {
+                    $mdp1 = password_hash($_POST['newmdp1'], PASSWORD_DEFAULT);
+                    $editionprofilOk->reqMdp($mdp1, $_SESSION['idconnect']);
+                    header('Location: index.php?action=profil');
+                } else {
+                    throw new \Exception("Vos deux mdp ne correspondent pas !");
+                        
+                }
+            }
+
+            //Télécharger son avatar
+
+            if(isset($_FILES['avatar']) AND !empty($_FILES['avatar']['name'])) {
+                $tailleMax = 2097152;//Taille de la photo(2097152 octets ->correspond à 2Mo)
+                $extensionsValides = array('jpg', 'jpeg', 'gif', 'png');//Les extensions souhaitées
+                if($_FILES['avatar']['size'] <= $tailleMax) {
+                    $extensionUpload = strtolower(substr(strrchr($_FILES['avatar']['name'], '.'), 1));//vérification de l'extension
+                    if(in_array($extensionUpload, $extensionsValides)) {//pour savoir est ce que le fichier upload intégre bien les extensions valides
+                        $chemin = "public/membres/avatars/".$_SESSION['idconnect'].".".$extensionUpload;//chemin vers lequel sera uplooad notre photo
+                        $resultat = move_uploaded_file($_FILES['avatar']['tmp_name'], $chemin);
+                        var_dump($resultat);
+                        if($resultat) {
+                            
+                            $avatar = $_SESSION['idconnect'].".".$extensionUpload;
+                            $userId = $_SESSION['idconnect'];
+                            $avatarOK = $editionprofilOk->reqAvatar($avatar, $userId);
+                            header('Location: index.php?action=profil');
+                        }else{
+                            throw new \Exception("Erreur durant l'importation de votre photo de profil");
+                               
+                        }
+                    }else{
+                        throw new \Exception("Votre photo de profil doit être au format jpg, jpeg, gif ou png");
+                        
+                    }
+                }else{
+                    throw new \Exception("Votre photo de profil ne doit pas dépasser 2Mo");
+                   
+                }
+            }
+
+            require('view/frontend/editprofil.php');
+        }
     }
-          
-}
-//désignalement d'un commentaire
-function untag($commentId)
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager(); // Création d'un objet
-    $posts = $postManager->getPosts();
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-    $flagComments = $commentManager->adminFlagComments();
-    $affecteduntag = $commentManager->untagComment($commentId);
-    if ($affecteduntag) {
-         header('Location: index.php?action=administration');
-   
+
+    //page météo
+    public function meteo()
+    {
+        require('view/frontend/meteo.php');
     }
-    else{
-        throw new Exception("commentaire signalé !");
-        
+
+    //page de rédaction des topics
+    public function newTopic()
+    {
+        $postManager = new PostManager();
+        $post = $postManager->getCats();
+
+
+        require('view/frontend/newTopic.php');
     }
-          
-}
-//supprime un commentaire
-function deleteComment($commentId)
-{
-    $postManager = new \OpenClassrooms\Blog\Model\PostManager(); // Création d'un objet
-    $posts = $postManager->getPosts();
-    $commentManager = new \OpenClassrooms\Blog\Model\CommentManager();
-    $deleteComments = $commentManager->adminFlagComments();
-    $affectedComment = $commentManager->supprimComment($commentId);
-    header('Location: index.php?action=administration');
+
     
+    //page de traitement et d'insertion topics
+    public function inserTopic()
+    {
+        $postManager = new PostManager();
+        
+        if(isset($_POST['tsubmit'])) {
+            if(isset($_POST['tsujet'],$_POST['tcontenu'])) {
+                $titre = htmlspecialchars($_POST['tsujet']);
+                $content = htmlspecialchars($_POST['tcontenu']);
+                $cat = $_POST['catSelect'];
+                
+                if(!empty($titre) AND !empty($content)) {
+                    if(strlen($titre) <= 70) {
+                        $inser = $postManager->addTopic($cat, $_SESSION['idconnect'], $titre, $content);
+                        header('location: index.php?action=nouveautopic');
+
+                    }else{
+                        throw new Exception("Votre sujet ne peut pas dépasser 70 caractéres !");
+                        
+                    }    
+
+                }else{
+                    throw new \Exception("Veuillez compléter tous les champs !");
+                    
+                }    
+
+            }   
+        }
+    }
+
+    //récupére un topic
+    public function topic($topicId)
+    {
+        $postManager = new PostManager();
+        $commentManager = new CommentManager();
+        $post = $postManager->getTopic($_GET['id']);
+        $sendTopic = $postManager->getSendTopic($_GET['id']);
+        $catopic = $postManager->catopic();
+        
+        $comment = $commentManager->commentTotalReq($topicId);
+
+        $commentParPage = 3;
+        $commentTotal = $comment->rowCount();
+        $pageTotale = ceil($commentTotal/$commentParPage);
+        
+        if(isset($_GET['page']) AND !empty($_GET['page']) AND $_GET['page'] > 0 AND $_GET['page'] <= $pageTotale) {
+            $_GET['page'] = intval($_GET['page']);
+            $pageCourante = $_GET['page'];
+        } else {
+            $pageCourante = 1;
+        }
+        
+        $depart = ($pageCourante-1)*$commentParPage;//offset
+
+        $comments = $commentManager->getComments($_GET['id'], $depart, $commentParPage);
+        
+        require('view/frontend/topicView.php');
+    }
+
+
+    //récupére une catégorie
+    public function cat($catId)
+    {
+        $postManager = new PostManager();
+        $post = $postManager->getCat($_GET['id']);
+        
+        require('view/frontend/catView.php');
+    }
+
+    //ajout de commentaire
+    public function addComment($topicId, $author, $comment)
+    {
+        $commentManager = new CommentManager(); 
+
+        $affectedLines = $commentManager->postComment($_GET['id'], $_SESSION['idconnect'], $comment);
+    
+        if ($affectedLines === false) {
+            throw new \Exception('Impossible d\'ajouter le commentaire !');
+        }
+        else {
+            header('Location: index.php?action=topic&id=' . $_GET['id']);
+        }
+    }
+
+    //signalement d'un commentaire
+    public function flag($commentId)
+    {
+        $commentManager = new CommentManager();
+        $affectedFlag = $commentManager->flagComment($commentId);
+        if ($affectedFlag) {
+            header('Location: index.php?action=topic&id=' . $_GET['topic_id']);
+   
+        }
+        else{
+            throw new \Exception("commentaire non signalé !");
+        
+        }
+          
+    }
+
+    //page d'administration
+    public function admin()
+    {
+        $postManager = new PostManager(); 
+        $posts = $postManager->getTopics();
+        $cats = $postManager->getCats();
+        $commentManager = new CommentManager();
+        $flagComments = $commentManager->adminFlagComments();
+
+        require('view/backend/adminView.php');
+    }
+
+    //désignalement d'un commentaire
+    public function untag($commentId)
+    {
+        $postManager = new PostManager(); 
+        $posts = $postManager->getTopics();
+        $commentManager = new CommentManager();
+        $flagComments = $commentManager->adminFlagComments();
+        $affecteduntag = $commentManager->untagComment($commentId);
+        if ($affecteduntag) {
+            header('Location: index.php?action=administration');
+   
+        }
+        else{
+            throw new \Exception("commentaire signalé !");
+        
+        }
+          
+    }
+
+    //supprime un commentaire
+    public function deleteComment($commentId)
+    {
+        $postManager = new PostManager(); 
+        $posts = $postManager->getTopics();
+        $commentManager = new CommentManager();
+        $deleteComments = $commentManager->adminFlagComments();
+        $affectedComment = $commentManager->supprimComment($commentId);
+        header('Location: index.php?action=administration');
+    
+    }
+
+    //supprime un topic
+    public function supprimTopic($topicId)
+    {
+        $postManager = new PostManager();
+        $commentManager = new CommentManager();
+        $posts = $postManager->getTopics();
+        $comments = $commentManager->adminFlagComments();
+        $supTopic = $postManager->supprimTopic($topicId);
+
+        header("Location: index.php?action=administration");
+    }
+
+    //modification d'un topic
+    public function editTopic($topicId)
+    {
+        $postManager = new PostManager();
+        $editTopic = $postManager->getTopic($topicId);
+    
+        require('view/backend/modifTopic.php');
+    }
+
+    //modification et envoi du topic dans la BDD
+    public function updateTopic($topicId)
+    {
+        $postManager = new PostManager();
+        $titre_topic = $_POST['topic_title'];
+        $content_topic = $_POST['topic_content'];
+        $topicId = $_GET['id'];
+        $postManager->editTopic($titre_topic ,$content_topic ,$topicId);
+
+        throw new \Exception("Votre topic a bien été modifié !");
+    
+    }
+
+    //supprime une catégorie
+    public function supprimCat($catId)
+    {
+        $postManager = new PostManager();
+        $commentManager = new CommentManager();
+        $posts = $postManager->getCats();
+        $comments = $commentManager->adminFlagComments();
+        $supCat = $postManager->supprimCat($catId);
+
+        header("Location: index.php?action=administration");
+    }
+
+    //modification d'une catégorie
+    public function editCat($catId)
+    {
+        $postManager = new PostManager();
+        $editCat = $postManager->getCat($catId);
+    
+        require('view/backend/modifCat.php');
+    }
+
+    //modification et envoi d'une catégorie dans la BDD
+    public function updateCat($catId)
+    {
+        $postManager = new PostManager();
+        $titre_cat = $_POST['cat_title'];
+        
+        $catId = $_GET['id'];
+        $postManager->editCat($titre_cat , $catId);
+
+        throw new \Exception("Votre Catégorie a bien été modifiée !");
+    
+    }
+
+    //accueil
+    public function home()
+    {
+        $postManager = new PostManager(); 
+        $posts = $postManager->getCats(); 
+        $topics = $postManager->getTopics();
+        $catopic = $postManager->catopic();
+       
+        require('view/frontend/accueil.php');
+    }
+
 }
-//accueil
-function home()
-{
-    require('view/frontend/accueil.php');
-}
-*/
+
